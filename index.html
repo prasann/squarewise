@@ -1,0 +1,813 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f4ef">
+  <meta name="description" content="Make the chessboard familiar. Guided landmarks, visual explanations, and thoughtful square recall.">
+  <title>Squarewise — know your board</title>
+  <script>
+    (() => {
+      const param = new URLSearchParams(window.location.search).get("clawpilotTheme");
+      const theme =
+        param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --cp-bg: #f7f4ef;
+      --cp-bg-elevated: #fcfbf8;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #f5f5f5;
+      --cp-border: #dedede;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-text-muted: #5c5c5c;
+      --cp-text-soft: #6f6f6f;
+      --cp-accent: #b11f4b;
+      --cp-accent-hover: #9a1a41;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-success: #16a34a;
+      --cp-danger: #dc2626;
+      --cp-warning: #f59e0b;
+      --cp-link: #0078d4;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      --cp-overlay: rgba(255, 255, 255, 0.8);
+      --cp-panel: rgba(255, 255, 255, 0.86);
+      --cp-panel-strong: rgba(255, 255, 255, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.55);
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --cp-bg: #3d3b3a;
+      --cp-bg-elevated: #343231;
+      --cp-surface: #292929;
+      --cp-surface-soft: #2e2e2e;
+      --cp-border: #474747;
+      --cp-border-strong: #5f5f5f;
+      --cp-text: #dedede;
+      --cp-text-muted: #919191;
+      --cp-text-soft: #b0b0b0;
+      --cp-accent: #fd8ea1;
+      --cp-accent-hover: #fb7b91;
+      --cp-accent-soft: rgba(253, 142, 161, 0.14);
+      --cp-accent-fg: #1a1a1a;
+      --cp-success: #4ade80;
+      --cp-danger: #f87171;
+      --cp-warning: #fbbf24;
+      --cp-link: #4da6ff;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --cp-overlay: rgba(41, 41, 41, 0.88);
+      --cp-panel: rgba(41, 41, 41, 0.72);
+      --cp-panel-strong: rgba(41, 41, 41, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.04);
+      --cp-highlight: rgba(253, 142, 161, 0.12);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--cp-bg); color: var(--cp-text); font: 15px/1.5 "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif; }
+    button, select, input { font: inherit; }
+    button { cursor: pointer; touch-action: manipulation; }
+    button:disabled { cursor: default; opacity: .48; }
+    button, a, select { -webkit-tap-highlight-color: var(--cp-accent-soft); }
+    :focus-visible { outline: 3px solid var(--cp-accent); outline-offset: 3px; }
+    [hidden] { display: none !important; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: clamp(24px, 3vw, 34px); font-weight: 650; letter-spacing: -1px; line-height: 1.2; }
+    h2 { font-size: 19px; font-weight: 650; letter-spacing: -.4px; }
+    h3 { font-size: 15px; }
+    .muted { color: var(--cp-text-muted); }
+    .eyebrow { font-size: 10px; font-weight: 750; letter-spacing: 1.8px; text-transform: uppercase; color: var(--cp-text-soft); }
+    .mono { font-family: Consolas, "Courier New", Courier, monospace; }
+    .app { max-width: 1440px; margin: auto; padding: 0 36px 36px; }
+    .header { height: 92px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--cp-border); gap: 12px; }
+    .brand { display: flex; gap: 12px; align-items: center; }
+    .brand-mark { width: 36px; height: 36px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; transform: rotate(-6deg); }
+    .brand-mark i { background: var(--cp-accent); border-radius: 3px; }
+    .brand-mark i:nth-child(2), .brand-mark i:nth-child(3) { opacity: .25; }
+    .brand strong { font-size: 23px; letter-spacing: -.8px; font-weight: 750; }
+    .brand small { display: block; font-size: 11px; color: var(--cp-text-muted); }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .btn { border: 1px solid var(--cp-border); background: var(--cp-surface); color: var(--cp-text); padding: 10px 14px; border-radius: 10px; font-weight: 600; min-height: 44px; transition: background .15s, border-color .15s; }
+    .btn:hover:not(:disabled) { background: var(--cp-surface-soft); border-color: var(--cp-border-strong); }
+    .btn.primary { background: var(--cp-accent); color: var(--cp-accent-fg); border-color: var(--cp-accent); }
+    .btn.primary:hover:not(:disabled) { background: var(--cp-accent-hover); }
+    .btn.quiet { background: none; border-color: var(--cp-border); font-size: 12px; }
+    .btn.text { background: none; border-color: var(--cp-bg); color: var(--cp-text-muted); font-weight: 500; }
+    .layout { display: grid; grid-template-columns: 220px minmax(320px, 1fr) 288px; gap: 32px; padding-top: 32px; align-items: start; }
+    .sidebar { padding-top: 4px; }
+    .sidebar > .eyebrow { margin-bottom: 16px; }
+    .chapter-list { display: flex; flex-direction: column; gap: 6px; }
+    .chapter { width: 100%; display: flex; align-items: center; gap: 12px; border: 1px solid var(--cp-bg); border-radius: 12px; background: none; text-align: left; color: var(--cp-text-muted); padding: 12px 10px; }
+    .chapter:hover { background: var(--cp-surface-soft); }
+    .chapter.active { color: var(--cp-accent); background: var(--cp-accent-soft); border-color: var(--cp-highlight); }
+    .chapter-number { font: 12px Consolas, monospace; width: 30px; height: 30px; border: 1px solid var(--cp-border); border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; }
+    .chapter.active .chapter-number { background: var(--cp-accent); color: var(--cp-accent-fg); border-color: var(--cp-accent); }
+    .chapter-title { display: block; font-size: 13px; font-weight: 650; }
+    .chapter-subtitle { display: block; font-size: 11px; margin-top: 2px; color: var(--cp-text-soft); }
+    .sidebar-note { border-top: 1px solid var(--cp-border); margin-top: 24px; padding-top: 20px; font-size: 12px; color: var(--cp-text-muted); }
+    .sidebar-note p { margin: 8px 0 16px; }
+    .sidebar-note .btn { width: 100%; }
+    .stage-heading { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 20px; }
+    .stage-heading .eyebrow { margin-bottom: 8px; }
+    .stage-heading .btn { flex-shrink: 0; }
+    .mode-switch { display: flex; gap: 4px; padding: 4px; background: var(--cp-surface-soft); border: 1px solid var(--cp-border); border-radius: 12px; }
+    .mode-switch button { width: 50%; border: 0; border-radius: 8px; padding: 9px 12px; background: none; color: var(--cp-text-muted); font-size: 13px; min-height: 40px; }
+    .mode-switch button.active { background: var(--cp-surface); color: var(--cp-text); font-weight: 650; box-shadow: 0 1px 2px var(--cp-border); }
+    .prompt { min-height: 96px; padding: 18px 2px 12px; }
+    .prompt h2 { font-size: 22px; line-height: 1.35; }
+    .prompt p { margin-top: 5px; font-size: 13px; color: var(--cp-text-muted); }
+    .prompt .target-inline { color: var(--cp-accent); font-family: Consolas, monospace; }
+    .mobile-teaching, .mobile-lesson-nav { display: none; }
+    .board-shell { position: relative; }
+    .board-frame { display: grid; grid-template-columns: 22px 1fr; grid-template-rows: 1fr 24px; }
+    .rank-labels { display: grid; grid-template-rows: repeat(8, 1fr); align-items: center; text-align: center; font: 12px Consolas, monospace; color: var(--cp-text-muted); }
+    .file-labels { grid-column: 2; display: grid; grid-template-columns: repeat(8, 1fr); text-align: center; align-items: end; font: 12px Consolas, monospace; color: var(--cp-text-muted); }
+    .axis-label { transition: opacity .2s; }
+    .axis-label.hidden-label { opacity: 0; }
+    .axis-label.emphasis { color: var(--cp-accent); font-weight: 800; }
+    .board { aspect-ratio: 1; width: 100%; display: grid; grid-template-columns: repeat(8, 1fr); border-radius: 8px; overflow: hidden; border: 1px solid var(--cp-border-strong); position: relative; }
+    .square { appearance: none; border: 0; border-radius: 0; padding: 0; background: var(--cp-bg-elevated); position: relative; display: grid; place-items: center; color: var(--cp-text); min-width: 0; aspect-ratio: 1; touch-action: manipulation; isolation: isolate; }
+    .square.dark { background: var(--cp-border-strong); }
+    .square::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+    .square.trace::before { background: var(--cp-highlight); box-shadow: inset 0 0 0 1px var(--cp-highlight); }
+    .square.target::after, .square.selected::after { content: ""; width: 66%; height: 66%; border-radius: 50%; border: 2px solid var(--cp-accent); position: absolute; background: var(--cp-accent-soft); pointer-events: none; }
+    .square.selected::after { border-radius: 8px; background: var(--cp-accent); width: 76%; height: 76%; }
+    .square.anchor::after { content: ""; position: absolute; inset: 18%; border: 2px dashed var(--cp-accent); border-radius: 8px; pointer-events: none; }
+    .square.wrong { box-shadow: inset 0 0 0 3px var(--cp-danger); }
+    .square:focus-visible { z-index: 2; outline-offset: -4px; }
+    .square-letter { z-index: 1; font: 600 clamp(12px, 2vw, 23px) Consolas, monospace; position: relative; }
+    .selected .square-letter { color: var(--cp-accent-fg); }
+    .piece { font: 36px Georgia, serif; z-index: 1; color: var(--cp-text); }
+    .square .heat-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--cp-warning); }
+    .square .heat-dot.secure { background: var(--cp-success); }
+    .square .heat-dot.new { background: var(--cp-text-muted); width: 4px; height: 4px; }
+    .board-footer { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--cp-text-muted); padding: 10px 0 0 22px; min-height: 40px; gap: 8px; }
+    .board-footer label { display: flex; align-items: center; gap: 6px; min-height: 32px; }
+    input[type=checkbox] { accent-color: var(--cp-accent); width: 16px; height: 16px; }
+    .feedback { border: 1px solid var(--cp-border); border-radius: 12px; padding: 12px 14px; margin-top: 12px; font-size: 13px; background: var(--cp-surface); min-height: 66px; }
+    .feedback strong { display: block; font-weight: 650; margin-bottom: 2px; }
+    .feedback.good { border-color: var(--cp-success); }
+    .feedback.retry { border-color: var(--cp-warning); }
+    .feedback p { color: var(--cp-text-muted); }
+    .action-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+    .action-row > .primary { flex: 1; }
+    .answer-pad { margin: 12px 0 4px; }
+    .answer-pad .eyebrow { margin-bottom: 8px; }
+    .key-row { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; margin-top: 6px; }
+    .key { padding: 0; height: 42px; min-height: 42px; font: 17px Consolas, monospace; }
+    .key.chosen { background: var(--cp-accent); border-color: var(--cp-accent); color: var(--cp-accent-fg); }
+    .coach { padding-top: 4px; }
+    .card { padding: 22px; background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 16px; }
+    .coach .card + .card { margin-top: 16px; }
+    .card .eyebrow { margin-bottom: 12px; }
+    .lesson-title { font-size: 20px; line-height: 1.3; margin-bottom: 12px; }
+    .lesson-body { color: var(--cp-text-muted); font-size: 14px; line-height: 1.7; }
+    .lesson-body b { color: var(--cp-text); font-weight: 650; }
+    .memory { padding: 14px; border-radius: 10px; background: var(--cp-accent-soft); margin-top: 18px; font-size: 13px; }
+    .memory strong { color: var(--cp-accent); font-size: 11px; display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+    .step-dots { display: flex; gap: 5px; margin: 20px 0 12px; }
+    .step-dot { flex: 1; height: 3px; background: var(--cp-border); border-radius: 2px; }
+    .step-dot.done { background: var(--cp-accent); }
+    .lesson-nav { display: flex; gap: 8px; }
+    .lesson-nav .primary { flex: 1; }
+    .stat-head { display: flex; justify-content: space-between; align-items: end; }
+    .stat-number { font: 32px/1 Consolas, monospace; letter-spacing: -2px; }
+    .stat-number span { font-size: 14px; color: var(--cp-text-muted); letter-spacing: 0; }
+    .progress-track { height: 5px; border-radius: 8px; background: var(--cp-border); overflow: hidden; margin: 14px 0 10px; }
+    .progress-fill { height: 100%; background: var(--cp-accent); transition: width .3s; }
+    .small { font-size: 12px; color: var(--cp-text-muted); }
+    .status-line { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--cp-text-muted); }
+    .status-dot { height: 6px; width: 6px; border-radius: 50%; background: var(--cp-success); }
+    .bottom-note { text-align: center; color: var(--cp-text-soft); font-size: 11px; margin-top: 28px; }
+    dialog { border: 1px solid var(--cp-border); border-radius: 20px; background: var(--cp-bg-elevated); color: var(--cp-text); padding: 28px; width: min(94vw, 620px); max-height: 90dvh; overflow-y: auto; box-shadow: var(--cp-shadow); }
+    dialog::backdrop { background: var(--cp-overlay); }
+    .dialog-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .map-grid { display: grid; grid-template-columns: repeat(8, 1fr); margin: 20px 0; border: 1px solid var(--cp-border); border-radius: 8px; overflow: hidden; }
+    .map-square { aspect-ratio: 1; display: grid; place-items: center; font: 12px Consolas, monospace; border: 1px solid var(--cp-border); background: var(--cp-surface); }
+    .map-square.developing { background: var(--cp-accent-soft); box-shadow: inset 0 -3px var(--cp-warning); }
+    .map-square.secure { background: var(--cp-accent-soft); box-shadow: inset 0 -3px var(--cp-success); }
+    .map-square:focus, .map-square:hover { outline: 2px solid var(--cp-accent); outline-offset: -2px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; margin-bottom: 16px; color: var(--cp-text-muted); }
+    .legend i { width: 8px; height: 8px; display: inline-block; margin-right: 5px; background: var(--cp-border); border-radius: 50%; }
+    .legend .developing { background: var(--cp-warning); }
+    .legend .secure { background: var(--cp-success); }
+    .settings-row { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
+    .notice { margin-top: 12px; background: var(--cp-accent-soft); border: 1px solid var(--cp-accent); color: var(--cp-text); border-radius: 10px; padding: 12px 16px; font-size: 13px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    @media (min-width: 1400px) { .layout { grid-template-columns: 220px minmax(320px, 550px) 288px; justify-content: center; gap: 40px; } }
+    @media (max-width: 1140px) { .app { padding: 0 24px 24px; } .layout { grid-template-columns: 176px minmax(300px, 1fr) 248px; gap: 20px; } .card { padding: 18px; } .chapter { gap: 8px; padding-left: 4px; padding-right: 4px; } }
+    @media (max-width: 940px) { .layout { grid-template-columns: minmax(300px, 1fr) 280px; } .sidebar { grid-column: 1 / -1; } .sidebar > .eyebrow, .sidebar-note { display: none; } .chapter-list { flex-direction: row; overflow-x: auto; padding-bottom: 6px; } .chapter { width: auto; flex-shrink: 0; padding: 8px 12px; } .chapter-subtitle { display: none; } .chapter-number { width: 24px; height: 24px; } .header { height: 76px; } }
+    @media (max-width: 680px) {
+      .app { padding: 0 16px max(24px, env(safe-area-inset-bottom)); }
+      .header { height: 72px; }
+      .brand strong { font-size: 21px; }
+      .brand-mark { height: 30px; width: 30px; }
+      .brand small { font-size: 10px; }
+      .header .status-line { display: none; }
+      .header .btn { padding: 8px 11px; }
+      .layout { display: flex; flex-direction: column; padding-top: 16px; gap: 14px; }
+      .sidebar, .stage, .coach { width: 100%; }
+      .chapter-list { gap: 4px; margin-right: -16px; padding-right: 16px; }
+      .chapter { padding: 8px 10px; }
+      .chapter-title { font-size: 12px; }
+      .stage-heading { margin-bottom: 14px; }
+      h1 { font-size: 26px; }
+      .stage-heading .eyebrow { font-size: 9px; margin-bottom: 5px; }
+      .prompt { padding-top: 14px; min-height: 88px; }
+      .prompt h2 { font-size: 21px; }
+      .square-letter { font-size: clamp(12px, 4vw, 20px); }
+      .piece { font-size: 29px; }
+      .coach { display: flex; flex-direction: column; gap: 12px; }
+      .coach .card + .card { margin-top: 0; }
+      .card { padding: 20px; }
+      .bottom-note { margin-top: 20px; }
+      .feedback { margin-top: 6px; }
+      .board-footer { padding-top: 4px; }
+      .key-row { gap: 4px; }
+      .key { height: 44px; }
+      .map-square { font-size: 11px; }
+      body:not(.practicing) .mobile-teaching { display: block; margin: 14px 0 16px; padding: 14px 16px; background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 12px; }
+      .mobile-teaching h2 { font-size: 16px; margin-bottom: 6px; }
+      .mobile-teaching .lesson-body { font-size: 13px; line-height: 1.55; }
+      .mobile-teaching .memory { padding: 10px 12px; margin-top: 10px; font-size: 12px; }
+      body:not(.practicing) .prompt { min-height: auto; padding: 0 2px 12px; }
+      body:not(.practicing) .prompt h2 { font-size: 17px; }
+      body:not(.practicing) #lesson-card { display: none; }
+      body:not(.practicing) .mobile-lesson-nav { display: flex; gap: 8px; margin-top: 12px; }
+      .mobile-lesson-nav .primary { flex: 1; }
+      .practicing .header { height: 56px; }
+      .practicing .brand small, .practicing .sidebar, .practicing .stage-heading .eyebrow { display: none; }
+      .practicing .layout { padding-top: 12px; }
+      .practicing .stage-heading { margin-bottom: 8px; }
+      .practicing .stage-heading h1 { font-size: 20px; letter-spacing: -.5px; }
+      .practicing #flip-board { min-height: 36px; padding: 6px 10px; }
+      .practicing .mode-switch button { min-height: 34px; padding: 6px 10px; }
+      .practicing .prompt { min-height: 72px; padding: 12px 0 10px; }
+      .practicing .prompt h2 { font-size: 18px; }
+      .practicing .prompt p { font-size: 12px; margin-top: 4px; }
+      .practicing .board-shell { max-width: max(246px, calc(100svh - 470px)); margin: 0 auto; }
+      .practicing:not(.has-feedback) #feedback { display: none; }
+      .practicing .board-footer { font-size: 10px; min-height: 28px; padding-top: 2px; }
+      .practicing .board-frame { grid-template-rows: 1fr 20px; }
+      .practicing .answer-pad { margin-top: 8px; }
+      .practicing .answer-pad .eyebrow { margin-bottom: 4px; font-size: 9px; }
+      .practicing .key-row { margin-top: 4px; }
+      .practicing .action-row { margin-top: 8px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="brand"><div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div><strong>squarewise</strong><small>A familiar board. A clearer mind.</small></div></div>
+      <div class="header-actions"><span class="status-line" id="save-status"><i class="status-dot"></i>Saved on this device</span><button class="btn quiet" id="open-progress">My board</button></div>
+    </header>
+    <div id="storage-notice" class="notice" role="status" hidden></div>
+    <main class="layout">
+      <nav class="sidebar" aria-label="Learning chapters">
+        <p class="eyebrow">Your field guide</p>
+        <div class="chapter-list" id="chapters"></div>
+        <div class="sidebar-note"><span class="eyebrow">Not a race</span><p>Learn a little. Wander a little. Your board will be here when you return.</p><button class="btn quiet" id="review-sidebar">Revisit uncertain squares</button></div>
+      </nav>
+      <section class="stage" aria-label="Interactive chessboard">
+        <div class="stage-heading"><div><p class="eyebrow" id="chapter-eyebrow">Chapter 01 / 06</p><h1 id="chapter-heading">Meet the board</h1></div><button class="btn quiet" id="flip-board" aria-label="Switch board perspective">Flip board</button></div>
+        <div class="mode-switch" role="group" aria-label="Learning mode"><button class="active" id="explore-mode" aria-pressed="true">Learn & explore</button><button id="practice-mode" aria-pressed="false">Try from memory</button></div>
+        <section class="mobile-teaching" aria-label="Current explanation"><h2 id="mobile-lesson-title"></h2><div class="lesson-body" id="mobile-lesson-body"></div><div class="memory"><p id="mobile-memory-tip"></p></div></section>
+        <div class="prompt"><h2 id="prompt-title"></h2><p id="prompt-detail"></p></div>
+        <div class="board-shell">
+          <div class="board-frame">
+            <div class="rank-labels" id="ranks" aria-hidden="true"></div>
+            <div class="board" id="board" role="group" aria-label="Chessboard, White's perspective"></div>
+            <div class="file-labels" id="files" aria-hidden="true"></div>
+          </div>
+          <div class="board-footer"><span id="perspective">White's perspective · rank 1 nearest you</span><label id="labels-control"><input type="checkbox" id="show-labels" checked> Edge labels</label><span id="practice-count" hidden></span></div>
+        </div>
+        <div class="answer-pad" id="answer-pad" hidden>
+          <div class="eyebrow">Letter first, number second</div>
+          <div class="key-row" id="letter-keys" role="group" aria-label="Choose file"></div>
+          <div class="key-row" id="number-keys" role="group" aria-label="Choose rank"></div>
+        </div>
+        <div class="feedback" id="feedback" aria-live="polite" aria-atomic="true"></div>
+        <div class="mobile-lesson-nav"><button class="btn quiet" id="mobile-previous">Back</button><button class="btn primary" id="mobile-next">Next idea</button></div>
+        <div class="action-row" id="practice-actions" hidden><button class="btn" id="hint">A little help</button><button class="btn primary" id="answer-button" hidden>Check answer</button><button class="btn primary" id="next-question" hidden>Next square</button></div>
+        <button class="btn" id="next-chapter" style="width:100%;margin-top:12px" hidden>Explore the next chapter</button>
+        <div class="action-row" id="explore-actions"><button class="btn" id="explain-square">Why this square?</button><button class="btn primary" id="start-recall">Try from memory</button></div>
+      </section>
+      <aside class="coach" aria-label="Learning guide">
+        <section class="card" id="lesson-card">
+          <p class="eyebrow" id="lesson-kicker">A little understanding first</p>
+          <h2 class="lesson-title" id="lesson-title"></h2>
+          <div class="lesson-body" id="lesson-body"></div>
+          <div class="memory"><strong>Keep this picture</strong><p id="memory-tip"></p></div>
+          <div id="learn-navigation"><div class="step-dots" id="step-dots" aria-hidden="true"></div><div class="lesson-nav"><button class="btn quiet" id="previous-step" aria-label="Previous explanation">Back</button><button class="btn primary" id="next-step">Next idea</button></div></div>
+        </section>
+        <section class="card">
+          <p class="eyebrow">Recognition, not repetition</p>
+          <div class="stat-head"><h3>Your familiar squares</h3><div class="stat-number" id="secure-count">0<span> / 64</span></div></div>
+          <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+          <p class="small" id="progress-description">A square becomes familiar after independent recall on three different days.</p>
+          <button class="btn quiet" id="review-button" style="width:100%;margin-top:16px">Revisit uncertain squares</button>
+        </section>
+      </aside>
+    </main>
+    <p class="bottom-note">No clock. No leaderboard. Just you, making sense of 64 squares.</p>
+  </div>
+  <dialog id="progress-dialog" aria-labelledby="progress-title">
+    <div class="dialog-head"><div><p class="eyebrow">Your growing mental map</p><h2 id="progress-title">A board becoming familiar</h2></div><button class="btn quiet" id="close-progress">Close</button></div>
+    <p class="small" id="map-caption"></p>
+    <div class="map-grid" id="map-grid"></div>
+    <div class="legend"><span><i></i>Unexplored</span><span><i class="developing"></i>Developing</span><span><i class="secure"></i>Familiar</span></div>
+    <p class="small" id="map-detail">Tap a square to see its learning history.</p>
+    <div class="settings-row"><button class="btn primary" id="review-dialog">Practice uncertain squares</button><button class="btn" id="export-progress">Export progress</button><button class="btn" id="import-progress">Import progress</button></div>
+    <input id="import-file" type="file" accept=".json,application/json" hidden>
+    <p class="small" style="margin-top:16px">Progress stays in this browser. Export a backup before clearing browser data or switching devices. Import replaces this browser's progress after confirmation.</p>
+    <p class="small" id="backup-status" role="status" style="margin-top:12px"></p>
+  </dialog>
+  <script>
+    "use strict";
+    const FILES = "abcdefgh";
+    const KEY = "squarewise.v1";
+    const ALL = Array.from({length: 64}, (_, i) => FILES[i % 8] + (Math.floor(i / 8) + 1));
+    const $ = id => document.getElementById(id);
+    const localDay = () => {
+      const d = new Date();
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    };
+    const corners = ["a1", "h1", "a8", "h8"];
+    const center = ["d4", "e4", "d5", "e5"];
+    const royals = ["d1", "e1", "d8", "e8"];
+    const chapters = [
+      {
+        title: "Meet the board", subtitle: "Letters meet numbers", pool: ALL,
+        steps: [
+          { title: "A square is an address.", body: "Every square has two parts: a <b>letter for its column</b> (a file) and a <b>number for its row</b> (a rank). Always say the letter first.", memory: "Letter, then number. Like e, then 4: e4.", prompt: "Meet e4.", detail: "Tap any square. Watch its two coordinates meet.", square: "e4", trace: "both" },
+          { title: "Files are standing columns.", body: "The eight files run from <b>a to h</b>. From White's side, a is on your left and h is on your right. Tap different squares in the same column: their letter stays the same.", memory: "A file stands tall. Same column, same letter.", prompt: "Follow the e-file.", detail: "Tap higher or lower in this column. What stays the same?", square: "e4", trace: "file" },
+          { title: "Ranks are horizontal rows.", body: "Ranks run from <b>1 to 8</b>, starting at White's home side. Tap along a row: the letter changes, but the number does not.", memory: "A rank runs across. Same row, same number.", prompt: "Walk along rank 4.", detail: "Tap across this row. Every address ends in 4.", square: "e4", trace: "rank" },
+          { title: "Find the meeting point.", body: "For <b>c6</b>, find the c-file, then rank 6. Their intersection is the square. Use this method when you need it; later, the location will feel familiar without counting.", memory: "Find the file. Find the rank. Meet in the middle.", prompt: "Two coordinates. One square.", detail: "Explore a few addresses, then try finding them without guides.", square: "c6", trace: "both" }
+        ]
+      },
+      {
+        title: "Four corners", subtitle: "Give the map its frame", pool: corners,
+        steps: [
+          { title: "Start at White's left corner.", body: "<b>a1</b> is the corner at White's left hand. It is a dark square. The a-file starts here, and rank 1 stretches across White's home side.", memory: "a1: White's left corner. Dark.", prompt: "Anchor one: a1.", detail: "Tap the other corners to compare their addresses.", square: "a1", trace: "none", landmarks: corners },
+          { title: "Cross the home edge.", body: "<b>h1</b> is White's right corner. It is light. The letter changes from a to h, but both corners are on rank 1.", memory: "Same home edge: a1 to h1.", prompt: "Anchor two: h1.", detail: "A different file. The same rank.", square: "h1", trace: "rank", landmarks: corners },
+          { title: "Look across the board.", body: "The opposite corners are <b>a8</b> and <b>h8</b>. Each shares a file with the corner directly across from it. These names stay fixed when the board is flipped.", memory: "White's edge is 1. Black's edge is 8.", prompt: "Anchor three: a8.", detail: "Follow the a-file between a1 and a8.", square: "a8", trace: "file", landmarks: corners },
+          { title: "A frame you can return to.", body: "Remember the corners as a frame, not four disconnected facts: <b>a1 / h1</b> on White's edge, <b>a8 / h8</b> on Black's. Use the nearest corner when you feel lost.", memory: "The frame stays fixed. Only your view changes.", prompt: "Anchor four: h8.", detail: "Try recalling the four corners without the labels.", square: "h8", trace: "none", landmarks: corners }
+        ]
+      },
+      {
+        title: "Home territory", subtitle: "Pieces as landmarks", pool: ALL.filter(s => [1, 2, 7, 8].includes(+s[1])),
+        steps: [
+          { title: "Two home rows on each side.", body: "At the start, White's pieces occupy <b>rank 1</b>, with pawns on <b>rank 2</b>. Black's pieces occupy <b>rank 8</b>, with pawns on <b>rank 7</b>.", memory: "White: 1 and 2. Black: 8 and 7.", prompt: "White's front doorstep: e2.", detail: "Starting ranks are landmarks, even after the pieces move.", square: "e2", trace: "rank", pieces: true },
+          { title: "D is the queen's starting file.", body: "The queens start on <b>d1</b> and <b>d8</b>. Think of the D in <b>royal Dame</b> if that helps. These are starting squares, not restrictions on where queens can go.", memory: "Queens begin on d. White d1; Black d8.", prompt: "The queen starts on d1.", detail: "Notice the queen's relationship to the d-file.", square: "d1", trace: "file", pieces: true },
+          { title: "E is the king's starting file.", body: "Kings start immediately next to the queens, on <b>e1</b> and <b>e8</b>. Together, d and e form a useful pair near the middle of the board.", memory: "Queen on d. King on e. A royal pair.", prompt: "The king starts on e1.", detail: "Tap e8 to find the opposite king's starting square.", square: "e1", trace: "file", pieces: true },
+          { title: "Let the pieces fade.", body: "Picture the starting position, even on an empty board. <b>f2</b> is one file toward h from the pawn in front of White's king. The position gives you a route to the address.", memory: "Use the starting position as a map, then let it go.", prompt: "Find your way from home.", detail: "The pieces have gone; their starting squares have not.", square: "f2", trace: "both" }
+        ]
+      },
+      {
+        title: "The central four", subtitle: "A familiar neighborhood", pool: center,
+        steps: [
+          { title: "Make the middle a picture.", body: "The central four squares are <b>d4, e4, d5, e5</b>. Picture a two-by-two block: d and e are the files; 4 and 5 are the ranks.", memory: "The royal files meet the middle ranks.", prompt: "Meet the central four.", detail: "Tap each marked square and say its name.", square: "d4", trace: "none", landmarks: center },
+          { title: "White's half of the center.", body: "<b>d4 and e4</b> sit on the side of the central block nearer White. Moving from d4 to e4 changes only the letter.", memory: "d4 to e4: same rank, neighboring files.", prompt: "Side by side: d4 and e4.", detail: "Explore the two squares on rank 4.", square: "e4", trace: "rank", landmarks: center },
+          { title: "Black's half of the center.", body: "<b>d5 and e5</b> are the central squares nearer Black. Going from e4 to e5 changes only the number. That relationship stays true from either perspective.", memory: "e4 to e5: same file, neighboring ranks.", prompt: "Across the middle: e4 to e5.", detail: "Think about the coordinate change, not the screen direction.", square: "e5", trace: "file", landmarks: center },
+          { title: "Recall the picture, not a count.", body: "When you hear <b>d5</b>, picture its place in the central block. The aim is eventually to recognize it, rather than counting five rows from an edge.", memory: "Four familiar squares become one familiar shape.", prompt: "Make the center feel like home.", detail: "Try naming and finding all four without the guides.", square: "d5", trace: "none", landmarks: center }
+        ]
+      },
+      {
+        title: "Build connections", subtitle: "Grow beyond your anchors", pool: ALL.filter(s => "bcdefg".includes(s[0]) && +s[1] >= 3 && +s[1] <= 6),
+        steps: [
+          { title: "Grow a neighborhood.", body: "Start from a square you know. From <b>e4</b>, one file toward h reaches <b>f4</b>. Only the letter changes. The dashed outline marks your starting anchor.", memory: "A sideways neighbor changes the letter only.", prompt: "From e4, one file toward h.", detail: "The dashed square is e4. The selected neighbor is f4.", square: "f4", anchor: "e4", trace: "none" },
+          { title: "Change one coordinate.", body: "From <b>e4</b>, one rank toward 8 reaches <b>e5</b>. Only the number changes. Saying 'toward rank 8' works even when you view the board as Black.", memory: "A same-file neighbor changes the number only.", prompt: "From e4, one rank toward 8.", detail: "Keep e. Change 4 to 5.", square: "e5", anchor: "e4", trace: "file" },
+          { title: "A diagonal changes both.", body: "From <b>d4</b>, one file toward a and one rank toward 8 reaches <b>c5</b>. Break the journey into two parts: d to c, then 4 to 5.", memory: "Diagonal neighbors change letter and number.", prompt: "From d4 to c5.", detail: "One file toward a. One rank toward 8.", square: "c5", anchor: "d4", trace: "both" },
+          { title: "Use the route, then lose it.", body: "In practice, follow the coordinate clues from a dashed anchor. Once a square becomes familiar, try picturing the destination before working through the route.", memory: "Anchors are a bridge to recognition, not a permanent crutch.", prompt: "Connect a familiar square to a new one.", detail: "Practice will mix nearby destinations and starting anchors.", square: "f6", anchor: "e5", trace: "none" }
+        ]
+      },
+      {
+        title: "The other side", subtitle: "Same map, new perspective", pool: ALL,
+        steps: [
+          { title: "You moved. The addresses didn't.", body: "You are looking from Black's side now. <b>Rank 8 is nearest you</b>, and the files run h to a from left to right. e4 is still e4.", memory: "Rotate the view, never rename the squares.", prompt: "Same e4. A different view.", detail: "Notice where the e-file and rank 4 meet from Black's side.", square: "e4", trace: "both" },
+          { title: "Find the new near corners.", body: "Black's near-left corner on screen is <b>h8</b>; near-right is <b>a8</b>. Black's back rank is still 8, not 1.", memory: "Black's near edge: h8 across to a8.", prompt: "Your near-left corner is h8.", detail: "Use the corner frame again before removing labels.", square: "h8", trace: "rank", landmarks: corners },
+          { title: "Keep the royal landmarks.", body: "Black's queen still starts on <b>d8</b>, and the king on <b>e8</b>. Their positions on the screen have changed, but their addresses have not.", memory: "Queen d8. King e8. Same royal files.", prompt: "Find the queen's starting square.", detail: "The d-file is now on the right half of your view.", square: "d8", trace: "file", pieces: true },
+          { title: "Recognize from either seat.", body: "Explore the center, then try recall from this side. Progress is tracked <b>separately for White and Black</b>, so familiarity in one view does not hide uncertainty in the other.", memory: "One board. Two perspectives. Build both gradually.", prompt: "A familiar center, from Black's side.", detail: "When ready, try from memory. You can flip back at any time.", square: "d5", trace: "none", landmarks: center }
+        ]
+      }
+    ];
+    function freshState() { return { version: 1, chapter: 0, step: 0, black: false, labels: true, stats: {}, completed: [], activity: [] }; }
+    function validState(value) {
+      if (!value || value.version !== 1 || !Number.isInteger(value.chapter) || value.chapter < 0 || value.chapter >= chapters.length ||
+          !Number.isInteger(value.step) || value.step < 0 || value.step > 3 || typeof value.black !== "boolean" ||
+          typeof value.labels !== "boolean" || !value.stats || typeof value.stats !== "object" || Array.isArray(value.stats) ||
+          !Array.isArray(value.completed) || value.completed.some(n => !Number.isInteger(n) || n < 0 || n >= chapters.length) ||
+          !Array.isArray(value.activity) || value.activity.length > 5000 || value.activity.some(d => !validDay(d))) return false;
+      return Object.entries(value.stats).every(([key, stat]) => {
+        if (!/^[wb]:[a-h][1-8]$/.test(key) || !stat || typeof stat !== "object") return false;
+        return ["attempts", "clean", "misses", "assisted", "streak"].every(k => Number.isSafeInteger(stat[k]) && stat[k] >= 0) &&
+          stat.attempts === stat.clean + stat.misses + stat.assisted &&
+          stat.streak <= stat.clean && Array.isArray(stat.days) && stat.days.length <= 5000 &&
+          stat.days.every(validDay) && new Set(stat.days).size === stat.days.length && stat.days.length <= stat.clean &&
+          Number.isFinite(stat.due) && stat.due >= 0 && Number.isFinite(stat.last) && stat.last >= 0;
+      });
+    }
+    function validDay(d) {
+      return typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d)) && new Date(d).toISOString().slice(0, 10) === d;
+    }
+    let storageReady = true;
+    let state = freshState();
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw !== null) {
+        const parsed = JSON.parse(raw);
+        if (!validState(parsed)) throw new Error("Saved progress has an unrecognized format.");
+        state = parsed;
+      }
+    } catch (error) {
+      storageReady = false;
+      $("storage-notice").hidden = false;
+      $("storage-notice").textContent = "Saved progress could not be loaded. This session still works, but automatic saving is paused to protect existing data. You can export this session from My board. " + error.message;
+    }
+    let mode = "learn";
+    let selected = chapters[state.chapter].steps[state.step].square;
+    let explanation = 0;
+    let question = null;
+    let mixed = false;
+    let recent = [];
+    let retryQueue = [];
+    let round = { count: 0, clean: 0 };
+    let answerFile = "";
+    let answerRank = "";
+    let mapSelection = "";
+    function save() {
+      if (!storageReady) {
+        $("save-status").textContent = "Not saved · export a backup";
+        return;
+      }
+      try {
+        localStorage.setItem(KEY, JSON.stringify(state));
+        $("save-status").innerHTML = '<i class="status-dot"></i>Saved on this device';
+      } catch (error) {
+        storageReady = false;
+        $("storage-notice").hidden = false;
+        $("storage-notice").textContent = "This browser could not save progress. Your current session is still available; use My board → Export progress to keep a backup. " + error.message;
+        $("save-status").textContent = "Not saved · export a backup";
+      }
+    }
+    function squareList() {
+      const files = state.black ? [...FILES].reverse() : [...FILES];
+      const ranks = state.black ? [1,2,3,4,5,6,7,8] : [8,7,6,5,4,3,2,1];
+      return ranks.flatMap(rank => files.map(file => file + rank));
+    }
+    function statKey(square) { return (state.black ? "b:" : "w:") + square; }
+    function familiar(stat) { return Boolean(stat && stat.days.length >= 3 && stat.streak >= 2); }
+    function cleanStat() { return { attempts: 0, clean: 0, misses: 0, assisted: 0, streak: 0, days: [], last: 0, due: 0 }; }
+    function renderNav() {
+      $("chapters").innerHTML = chapters.map((chapter, i) => `<button class="chapter ${state.chapter === i && !mixed ? "active" : ""}" data-chapter="${i}" ${state.chapter === i && !mixed ? 'aria-current="step"' : ""}><span class="chapter-number">${state.completed.includes(i) ? "✓" : String(i + 1).padStart(2, "0")}</span><span><span class="chapter-title">${chapter.title}</span><span class="chapter-subtitle">${chapter.subtitle}</span></span></button>`).join("");
+    }
+    function renderBoard() {
+      const focusedSquare = document.activeElement?.dataset.square;
+      const step = chapters[state.chapter].steps[state.step];
+      const learning = mode === "learn";
+      const target = learning ? selected : question.target;
+      const hint = learning ? explanation : question.hint;
+      const labels = learning ? state.labels : hint >= 1;
+      let trace = learning ? (explanation ? (explanation === 1 ? "file" : "both") : step.trace) : (hint >= 3 ? "both" : hint >= 2 ? "file" : "none");
+      const showSelected = learning || question.done || hint >= 3;
+      const anchor = learning ? step.anchor : question.anchor;
+      const files = state.black ? [...FILES].reverse() : [...FILES];
+      const ranks = state.black ? [1,2,3,4,5,6,7,8] : [8,7,6,5,4,3,2,1];
+      $("files").innerHTML = files.map(f => `<span class="axis-label ${labels ? "" : "hidden-label"} ${f === target[0] && trace !== "none" && trace !== "rank" ? "emphasis" : ""}">${f}</span>`).join("");
+      $("ranks").innerHTML = ranks.map(r => `<span class="axis-label ${labels ? "" : "hidden-label"} ${String(r) === target[1] && trace !== "none" && trace !== "file" ? "emphasis" : ""}">${r}</span>`).join("");
+      $("board").setAttribute("aria-label", `Chessboard, ${state.black ? "Black" : "White"}'s perspective`);
+      $("board").innerHTML = squareList().map((square, i) => {
+        const dark = (FILES.indexOf(square[0]) + +square[1]) % 2 === 1;
+        const onTrace = ((trace === "file" || trace === "both") && square[0] === target[0]) || ((trace === "rank" || trace === "both") && square[1] === target[1]);
+        const classes = ["square", dark ? "dark" : "", onTrace ? "trace" : "", square === target && showSelected ? "selected" : "", !learning && question.type === "name" && square === target && !showSelected ? "target" : "", square === anchor || (learning && step.landmarks?.includes(square) && square !== target) ? "anchor" : "", !learning && question.wrong === square ? "wrong" : ""].filter(Boolean).join(" ");
+        const piece = learning && step.pieces ? ({d1:"♕", e1:"♔", d8:"♛", e8:"♚"}[square] || ([2,7].includes(+square[1]) ? (+square[1] === 2 ? "♙" : "♟") : "")) : "";
+        let content = "";
+        if (square === target && showSelected) content = `<span class="square-letter">${square}</span>`;
+        else if (piece) content = `<span class="piece" aria-hidden="true">${piece}</span>`;
+        else if (square === anchor) content = '<span class="square-letter" aria-hidden="true">•</span>';
+        const label = learning || labels || question.done ? square : `Row ${Math.floor(i / 8) + 1}, column ${i % 8 + 1}${!learning && question.type === "name" && square === target ? ", marked square" : ""}${square === anchor ? ", starting anchor" : ""}`;
+        return `<button class="${classes}" data-square="${square}" aria-label="${label}" ${learning ? `aria-pressed="${square === selected}"` : ""}>${content}</button>`;
+      }).join("");
+      if (focusedSquare) $("board").querySelector(`[data-square="${focusedSquare}"]`)?.focus({preventScroll: true});
+      $("perspective").textContent = `${state.black ? "Black" : "White"}'s perspective · rank ${state.black ? "8" : "1"} nearest you`;
+      $("labels-control").hidden = !learning;
+      $("show-labels").checked = state.labels;
+      $("practice-count").hidden = learning;
+      $("practice-count").textContent = `${round.count} recalled`;
+    }
+    function setFeedback(title, body, kind = "") {
+      $("feedback").className = "feedback" + (kind ? " " + kind : "");
+      $("feedback").replaceChildren();
+      const strong = document.createElement("strong");
+      strong.textContent = title;
+      const p = document.createElement("p");
+      p.textContent = body;
+      $("feedback").append(strong, p);
+    }
+    function describe(square) {
+      const file = square[0], rank = square[1];
+      let landmark = "";
+      if (corners.includes(square)) landmark = ` One of your four corner anchors.`;
+      else if (center.includes(square)) landmark = ` One of the central four: d4, e4, d5, e5.`;
+      else if (royals.includes(square)) landmark = ` The ${file === "d" ? "queen" : "king"}'s starting square for ${rank === "1" ? "White" : "Black"}.`;
+      else if (rank === "2") landmark = " White's starting pawn rank.";
+      else if (rank === "7") landmark = " Black's starting pawn rank.";
+      return `File ${file}, rank ${rank}.${landmark}`;
+    }
+    function renderStats() {
+      const count = ALL.filter(s => familiar(state.stats[statKey(s)])).length;
+      $("secure-count").innerHTML = `${count}<span> / 64</span>`;
+      $("progress-fill").style.width = (count / 64 * 100) + "%";
+      const attempts = ALL.reduce((sum, s) => sum + (state.stats[statKey(s)]?.attempts || 0), 0);
+      $("progress-description").textContent = `${state.black ? "Black" : "White"}'s view · ${attempts} completed first attempts. Familiar = independent recall on 3 different days, with the last 2 attempts unassisted and correct.`;
+    }
+    function renderLearn() {
+      const chapter = chapters[state.chapter], step = chapter.steps[state.step];
+      $("chapter-eyebrow").textContent = `Chapter ${String(state.chapter + 1).padStart(2, "0")} / 06`;
+      $("chapter-heading").textContent = chapter.title;
+      $("prompt-title").textContent = step.prompt;
+      $("prompt-detail").textContent = step.detail;
+      $("lesson-kicker").textContent = `Idea ${state.step + 1} of ${chapter.steps.length}`;
+      $("lesson-title").textContent = step.title;
+      $("lesson-body").innerHTML = step.body;
+      $("memory-tip").textContent = step.memory;
+      $("mobile-lesson-title").textContent = step.title;
+      $("mobile-lesson-body").innerHTML = step.body;
+      $("mobile-memory-tip").textContent = step.memory;
+      $("step-dots").innerHTML = chapter.steps.map((_, i) => `<span class="step-dot ${i <= state.step ? "done" : ""}"></span>`).join("");
+      $("previous-step").disabled = state.step === 0;
+      $("next-step").textContent = state.step === chapter.steps.length - 1 ? "Put it into practice" : "Next idea";
+      $("mobile-previous").disabled = state.step === 0;
+      $("mobile-next").textContent = $("next-step").textContent;
+      $("learn-navigation").hidden = false;
+      $("answer-pad").hidden = true;
+      $("practice-actions").hidden = true;
+      $("explore-actions").hidden = false;
+      setFeedback(selected, describe(selected));
+      $("explain-square").textContent = explanation === 0 ? "Why this square?" : explanation === 1 ? "Add the rank" : "Lesson view";
+      renderBoard();
+    }
+    function render() {
+      document.body.classList.toggle("practicing", mode === "practice");
+      document.body.classList.toggle("has-feedback", mode === "practice" && Boolean(question?.done || question?.hadMiss || question?.hint));
+      $("next-chapter").hidden = mode !== "practice" || mixed || !question?.done || round.count < 8 || state.chapter === chapters.length - 1;
+      $("next-chapter").textContent = state.chapter < chapters.length - 1 ? "Explore next: " + chapters[state.chapter + 1].title : "";
+      renderNav();
+      $("explore-mode").classList.toggle("active", mode === "learn");
+      $("practice-mode").classList.toggle("active", mode === "practice");
+      $("explore-mode").setAttribute("aria-pressed", String(mode === "learn"));
+      $("practice-mode").setAttribute("aria-pressed", String(mode === "practice"));
+      if (mode === "learn") renderLearn(); else renderQuestion();
+      renderStats();
+    }
+    function pickTarget(pool) {
+      const eligibleRetry = retryQueue.findIndex(item => item.after <= round.count && pool.includes(item.square) && !recent.slice(-2).includes(item.square));
+      if (eligibleRetry >= 0) return retryQueue.splice(eligibleRetry, 1)[0].square;
+      let candidates = pool.filter(s => !recent.slice(-Math.min(4, pool.length - 1)).includes(s));
+      if (!candidates.length) candidates = pool;
+      const now = Date.now();
+      const weighted = candidates.map(square => {
+        const s = state.stats[statKey(square)];
+        const weight = !s ? 4 : (s.due <= now ? 5 : 1) + Math.min(s.misses, 4) + (familiar(s) ? 0 : 2);
+        return { square, weight };
+      });
+      let pick = Math.random() * weighted.reduce((sum, item) => sum + item.weight, 0);
+      for (const item of weighted) { pick -= item.weight; if (pick < 0) return item.square; }
+      return weighted[weighted.length - 1].square;
+    }
+    function neighborClue(target) {
+      const anchors = [...center, "c4", "f5", "d3", "e6"];
+      const nearby = anchors.filter(a => a !== target && Math.abs(FILES.indexOf(a[0]) - FILES.indexOf(target[0])) <= 2 && Math.abs(+a[1] - +target[1]) <= 2);
+      const anchor = nearby.length ? nearby[Math.floor(Math.random() * nearby.length)] : "e4";
+      const df = FILES.indexOf(target[0]) - FILES.indexOf(anchor[0]), dr = +target[1] - +anchor[1];
+      const parts = [];
+      if (df) parts.push(`${Math.abs(df)} file${Math.abs(df) === 1 ? "" : "s"} toward ${df > 0 ? "h" : "a"}`);
+      if (dr) parts.push(`${Math.abs(dr)} rank${Math.abs(dr) === 1 ? "" : "s"} toward ${dr > 0 ? "8" : "1"}`);
+      return { anchor, text: `From ${anchor}: ${parts.join(", then ")}.` };
+    }
+    function newQuestion() {
+      const pool = mixed ? ALL : chapters[state.chapter].pool;
+      const target = pickTarget(pool);
+      const type = round.count % 3 === 2 ? "name" : "find";
+      const neighbor = !mixed && state.chapter === 4 && type === "find" ? neighborClue(target) : null;
+      question = { target, type, hint: 0, wrong: "", recorded: false, hadMiss: false, done: false, anchor: neighbor?.anchor, clue: neighbor?.text };
+      answerFile = ""; answerRank = "";
+      recent.push(target);
+      recent = recent.slice(-8);
+      render();
+    }
+    function beginPractice(isMixed = false) {
+      mode = "practice"; mixed = isMixed; recent = []; retryQueue = []; round = { count: 0, clean: 0 };
+      newQuestion();
+    }
+    function renderQuestion() {
+      document.body.classList.toggle("has-feedback", Boolean(question.done || question.hadMiss || question.hint));
+      $("next-chapter").hidden = mixed || !question.done || round.count < 8 || state.chapter === chapters.length - 1;
+      $("chapter-eyebrow").textContent = mixed ? "Your personal review" : `Chapter ${String(state.chapter + 1).padStart(2, "0")} / 06 · recall`;
+      $("chapter-heading").textContent = mixed ? "Make it familiar" : chapters[state.chapter].title;
+      $("prompt-title").replaceChildren();
+      if (question.type === "name") $("prompt-title").textContent = "What is the marked square called?";
+      else if (question.clue) $("prompt-title").textContent = question.clue;
+      else {
+        $("prompt-title").append("Find ");
+        const span = document.createElement("span");
+        span.className = "target-inline"; span.textContent = question.target;
+        $("prompt-title").append(span, ".");
+      }
+      $("prompt-detail").textContent = question.type === "name" ? "Picture its address, then choose a letter and a number." : question.clue ? "The dashed outline is your starting anchor. Tap the destination." : "Take your time. Picture the square, then tap it.";
+      $("lesson-kicker").textContent = question.hint ? "A scaffold, not a shortcut" : "Build your own mental picture";
+      $("lesson-title").textContent = question.hint ? "Help is part of learning." : "Recall before you reveal.";
+      $("lesson-body").textContent = question.hint >= 3 ? describe(question.target) : question.hint === 2 ? "The destination's file is highlighted. Now find the rank where it belongs." : question.hint === 1 ? "The edge labels are back. Find the file, then the rank." : "Pause and picture the location. Use a corner, the royal files, or the central four if you need an anchor. Ask for a little help whenever you need it.";
+      $("memory-tip").textContent = question.anchor ? "The dashed outline is the starting square. Change only the coordinates named in the clue." : chapters[state.chapter].steps[state.step].memory;
+      $("learn-navigation").hidden = true;
+      $("practice-actions").hidden = false;
+      $("explore-actions").hidden = true;
+      $("answer-pad").hidden = question.type !== "name" || question.done;
+      $("answer-button").hidden = question.type !== "name" || question.done;
+      $("answer-button").disabled = !answerFile || !answerRank;
+      $("answer-button").textContent = answerFile && answerRank ? `Check ${answerFile}${answerRank}` : "Check answer";
+      $("next-question").hidden = !question.done;
+      $("hint").disabled = question.done;
+      $("hint").textContent = ["A little help", "Show the file", "Show & explain"][Math.min(question.hint, 2)];
+      if (question.type === "name") renderKeys();
+      if (!question.done && !question.wrong) setFeedback(question.hint >= 3 ? question.target + " — the answer is revealed" : "Make a mental picture.", question.hint >= 3 ? describe(question.target) : "No timer. Try recalling first; the guides are here if you need them.");
+      renderBoard();
+    }
+    function renderKeys() {
+      const focus = document.activeElement;
+      const focusedFile = focus?.dataset.file, focusedRank = focus?.dataset.rank;
+      $("letter-keys").innerHTML = [...FILES].map(f => `<button class="btn key ${answerFile === f ? "chosen" : ""}" data-file="${f}" aria-pressed="${answerFile === f}">${f}</button>`).join("");
+      $("number-keys").innerHTML = [1,2,3,4,5,6,7,8].map(n => `<button class="btn key ${answerRank === String(n) ? "chosen" : ""}" data-rank="${n}" aria-pressed="${answerRank === String(n)}">${n}</button>`).join("");
+      if (focusedFile) $("letter-keys").querySelector(`[data-file="${focusedFile}"]`)?.focus({preventScroll: true});
+      if (focusedRank) $("number-keys").querySelector(`[data-rank="${focusedRank}"]`)?.focus({preventScroll: true});
+    }
+    function record(outcome) {
+      if (question.recorded) return;
+      question.recorded = true;
+      const key = statKey(question.target);
+      const s = state.stats[key] || cleanStat();
+      const today = localDay();
+      s.attempts++; s.last = Date.now();
+      if (outcome === "clean") {
+        s.clean++; s.streak++;
+        if (!s.days.includes(today)) s.days.push(today);
+        s.due = Date.now() + [0, 86400000, 3 * 86400000, 7 * 86400000][Math.min(s.streak, 3)];
+      } else {
+        s[outcome === "miss" ? "misses" : "assisted"]++;
+        s.streak = 0; s.due = Date.now();
+      }
+      state.stats[key] = s;
+      if (!state.activity.includes(today)) state.activity.push(today);
+      save(); renderStats();
+    }
+    function correction(answer, target) {
+      const df = FILES.indexOf(target[0]) - FILES.indexOf(answer[0]);
+      const dr = +target[1] - +answer[1];
+      if (df === 0) return `Right file, ${answer[0]}. Change rank ${answer[1]} to ${target[1]}: ${Math.abs(dr)} ${Math.abs(dr) === 1 ? "step" : "steps"} toward rank ${dr > 0 ? "8" : "1"}.`;
+      if (dr === 0) return `Right rank, ${answer[1]}. Change file ${answer[0]} to ${target[0]}: ${Math.abs(df)} ${Math.abs(df) === 1 ? "step" : "steps"} toward ${df > 0 ? "h" : "a"}.`;
+      return `You chose ${answer}. The destination is on file ${target[0]}, rank ${target[1]}. Find their intersection, then try again.`;
+    }
+    function submit(answer) {
+      if (!question || question.done) return;
+      if (answer !== question.target) {
+        question.wrong = answer; question.hadMiss = true;
+        record("miss");
+        if (!retryQueue.some(item => item.square === question.target)) retryQueue.push({ square: question.target, after: round.count + 4 });
+        renderQuestion();
+        setFeedback("Close the gap, not the app.", correction(answer, question.target), "retry");
+        return;
+      }
+      finishQuestion(false);
+    }
+    function finishQuestion(revealed) {
+      const independent = !question.hadMiss && question.hint === 0;
+      record(independent ? "clean" : "assisted");
+      question.done = true;
+      if (independent) round.clean++;
+      round.count++;
+      if (!independent && !retryQueue.some(item => item.square === question.target)) retryQueue.push({square: question.target, after: round.count + 3});
+      const checkpoint = round.count % 8 === 0;
+      renderQuestion();
+      setFeedback(revealed ? "Now picture it with the guides gone." : independent ? "Found it, from memory." : "You've found the meeting point.", checkpoint ? `${round.count} squares revisited; ${round.clean} independent first answers. Keep exploring, or stop whenever you like. Your progress is saved if browser storage is available.` : describe(question.target) + (independent ? " We'll revisit it on another day too." : " It will return after a few other squares."), independent ? "good" : "");
+      $("next-question").textContent = checkpoint ? "Keep exploring" : "Next square";
+      $("next-question").focus({preventScroll: true});
+    }
+    function chooseChapter(index) {
+      state.chapter = index; state.step = 0; state.black = index === 5;
+      mode = "learn"; mixed = false; selected = chapters[index].steps[0].square; explanation = 0; question = null;
+      save(); render();
+    }
+    function changeStep(delta) {
+      const chapter = chapters[state.chapter];
+      if (delta > 0 && state.step === chapter.steps.length - 1) {
+        if (!state.completed.includes(state.chapter)) state.completed.push(state.chapter);
+        save(); beginPractice(); return;
+      }
+      state.step = Math.max(0, Math.min(chapter.steps.length - 1, state.step + delta));
+      selected = chapter.steps[state.step].square; explanation = 0; save(); render();
+    }
+    function showMap() {
+      const view = state.black ? "Black" : "White";
+      $("map-caption").textContent = `${view}'s perspective. Familiar means clean recall on three distinct days and the last two attempts independently correct. Guided exploration doesn't count as recall.`;
+      $("map-grid").innerHTML = squareList().map(square => {
+        const s = state.stats[statKey(square)];
+        const status = familiar(s) ? "secure" : s ? "developing" : "";
+        return `<button class="map-square ${status}" data-map-square="${square}" aria-label="${square}: ${status === "secure" ? "familiar" : status || "unexplored"}">${square}</button>`;
+      }).join("");
+      if (!$("progress-dialog").open) $("progress-dialog").showModal();
+      if (mapSelection) showMapDetail(mapSelection);
+    }
+    function showMapDetail(square) {
+      mapSelection = square;
+      const s = state.stats[statKey(square)];
+      $("map-detail").textContent = s ? `${square}: ${s.clean} independent, ${s.misses} missed, ${s.assisted} assisted first attempts. Independently recalled on ${s.days.length} different ${s.days.length === 1 ? "day" : "days"}. ${describe(square)}` : `${square}: not yet practiced from this perspective. ${describe(square)}`;
+    }
+    function exportProgress() {
+      const blob = new Blob([JSON.stringify(state, null, 2)], {type: "application/json"});
+      const url = URL.createObjectURL(blob), a = document.createElement("a");
+      a.href = url; a.download = "squarewise-progress-" + localDay() + ".json"; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+      $("backup-status").textContent = "Progress export requested. Keep the downloaded JSON file as your backup.";
+    }
+    $("chapters").addEventListener("click", event => {
+      const button = event.target.closest("[data-chapter]");
+      if (button) chooseChapter(Number(button.dataset.chapter));
+    });
+    $("board").addEventListener("click", event => {
+      const button = event.target.closest("[data-square]");
+      if (!button) return;
+      if (mode === "learn") { selected = button.dataset.square; renderLearn(); }
+      else if (question.type === "find") submit(button.dataset.square);
+      else if (!question.done) setFeedback("Name the outlined square.", "Choose its file and rank using the two rows below the board.");
+    });
+    $("letter-keys").addEventListener("click", event => {
+      const button = event.target.closest("[data-file]");
+      if (button && question && !question.done) { answerFile = button.dataset.file; renderQuestion(); }
+    });
+    $("number-keys").addEventListener("click", event => {
+      const button = event.target.closest("[data-rank]");
+      if (button && question && !question.done) { answerRank = button.dataset.rank; renderQuestion(); }
+    });
+    $("answer-button").addEventListener("click", () => { if (answerFile && answerRank) submit(answerFile + answerRank); });
+    $("next-question").addEventListener("click", () => { newQuestion(); $("prompt-title").setAttribute("tabindex", "-1"); $("prompt-title").focus({preventScroll: true}); });
+    $("hint").addEventListener("click", () => {
+      if (!question || question.done) return;
+      question.hint = Math.min(3, question.hint + 1);
+      question.wrong = "";
+      if (question.hint === 3) finishQuestion(true);
+      else renderQuestion();
+    });
+    $("explain-square").addEventListener("click", () => { explanation = (explanation + 1) % 3; renderLearn(); });
+    $("previous-step").addEventListener("click", () => changeStep(-1));
+    $("next-step").addEventListener("click", () => changeStep(1));
+    $("mobile-previous").addEventListener("click", () => changeStep(-1));
+    $("mobile-next").addEventListener("click", () => changeStep(1));
+    $("next-chapter").addEventListener("click", () => { if (state.chapter < chapters.length - 1) chooseChapter(state.chapter + 1); });
+    $("start-recall").addEventListener("click", () => beginPractice());
+    $("practice-mode").addEventListener("click", () => { if (mode !== "practice") beginPractice(); });
+    $("explore-mode").addEventListener("click", () => { mode = "learn"; mixed = false; selected = chapters[state.chapter].steps[state.step].square; explanation = 0; render(); });
+    $("flip-board").addEventListener("click", () => {
+      state.black = !state.black; mapSelection = ""; save();
+      if (mode === "practice") { retryQueue = []; recent = []; newQuestion(); } else render();
+    });
+    $("show-labels").addEventListener("change", event => { state.labels = event.target.checked; save(); renderBoard(); });
+    for (const id of ["review-sidebar", "review-button", "review-dialog"]) $(id).addEventListener("click", () => {
+      if ($("progress-dialog").open) $("progress-dialog").close();
+      beginPractice(true);
+    });
+    $("open-progress").addEventListener("click", showMap);
+    $("close-progress").addEventListener("click", () => $("progress-dialog").close());
+    $("map-grid").addEventListener("click", event => {
+      const button = event.target.closest("[data-map-square]");
+      if (button) showMapDetail(button.dataset.mapSquare);
+    });
+    $("export-progress").addEventListener("click", exportProgress);
+    $("import-progress").addEventListener("click", () => $("import-file").click());
+    $("import-file").addEventListener("change", async event => {
+      const file = event.target.files[0];
+      if (!file) return;
+      try {
+        if (file.size > 2000000) throw new Error("That file is too large. Choose a Squarewise JSON backup smaller than 2 MB.");
+        const candidate = JSON.parse(await file.text());
+        if (!validState(candidate)) throw new Error("This is not a valid Squarewise v1 progress backup.");
+        if (!window.confirm("Replace progress in this browser with this backup? Export your current progress first if you want to keep it.")) return;
+        state = candidate; storageReady = true; mode = "learn"; mixed = false; question = null; explanation = 0; mapSelection = "";
+        selected = chapters[state.chapter].steps[state.step].square;
+        $("storage-notice").hidden = true;
+        save(); render(); showMap();
+        $("backup-status").textContent = storageReady ? "Backup imported and saved." : "Backup imported for this session, but browser saving is unavailable. Export before closing.";
+      } catch (error) {
+        $("backup-status").textContent = "Import failed: " + error.message + " Your existing progress was not changed.";
+      } finally { event.target.value = ""; }
+    });
+    render();
+    if (!storageReady) $("save-status").textContent = "Not saved · export a backup";
+  </script>
+</body>
+</html>
