@@ -129,7 +129,17 @@
     .axis-label { transition: opacity .2s; }
     .axis-label.hidden-label { opacity: 0; }
     .axis-label.emphasis { color: var(--cp-accent); font-weight: 800; }
-    .board { aspect-ratio: 1; width: 100%; display: grid; grid-template-columns: repeat(8, 1fr); border-radius: 8px; overflow: hidden; border: 1px solid var(--cp-border-strong); position: relative; }
+    .board {
+      /* Keep square colors and their annotations independent of the surrounding UI theme. */
+      --cp-bg-elevated: #fcfbf8;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-accent: #b11f4b;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+      aspect-ratio: 1; width: 100%; display: grid; grid-template-columns: repeat(8, 1fr); border-radius: 8px; overflow: hidden; border: 1px solid var(--cp-border-strong); position: relative;
+    }
     .square { appearance: none; border: 0; border-radius: 0; padding: 0; background: var(--cp-bg-elevated); position: relative; display: grid; place-items: center; color: var(--cp-text); min-width: 0; aspect-ratio: 1; touch-action: manipulation; isolation: isolate; }
     .square.dark { background: var(--cp-border-strong); }
     .square::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
